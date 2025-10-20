@@ -1,15 +1,16 @@
 import discord
 from discord.ext import commands
 from googletrans import Translator
+import os
 
-# 创建机器人实例，prefix是命令前缀（这里不用命令，所以随意）
+# 创建机器人实例
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.default())
-bot.intents.message_content = True  # 启用消息内容读取
+bot.intents.message_content = True
 
 # 初始化翻译器
 translator = Translator()
 
-# 目标语言列表：中文('zh-cn')、日文('ja')、韩文('ko')、泰文('th')
+# 目标语言列表
 target_languages = ['zh-cn', 'ja', 'ko', 'th']
 
 @bot.event
@@ -26,7 +27,7 @@ async def on_message(message):
     original_text = message.content
     detected_lang = translator.detect(original_text).lang
 
-    # 如果消息是纯英文或其他不支持的，就跳过（可选，根据需要调整）
+    # 如果消息是纯英文或其他不支持的语言，跳过
     if detected_lang not in ['zh-cn', 'ja', 'ko', 'th']:
         await bot.process_commands(message)
         return
@@ -43,8 +44,8 @@ async def on_message(message):
         reply = "\n".join(translations)
         await message.channel.send(reply)
 
-    # 继续处理命令（如果有）
+    # 继续处理命令
     await bot.process_commands(message)
 
-# 运行机器人，替换YOUR_TOKEN_HERE为你从步骤1复制的TOKEN
-bot.run('YOUR_TOKEN_HERE')
+# 从环境变量获取token
+bot.run(os.getenv('DISCORD_BOT_TOKEN'))
