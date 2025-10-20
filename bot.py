@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 from deep_translator import GoogleTranslator
-from langdetect import detect
 import os
 from flask import Flask
 import threading
@@ -25,7 +24,7 @@ def run_flask():
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
-target_languages = ['en', 'zh-CN', 'ja', 'ko', 'th']
+target_languages = ['en', 'zh-CN', 'ja', 'ko', 'th']  # 固定顺序
 
 @bot.event
 async def on_ready():
@@ -46,20 +45,9 @@ async def on_message(message):
 
     logger.info(f"收到消息：{original_text}")
 
-    # 检测输入语言
-    try:
-        detected_lang = detect(original_text)  # 使用 langdetect
-        logger.info(f"检测到语言：{detected_lang}")
-    except Exception as e:
-        logger.error(f"语言检测失败：{str(e)}")
-        detected_lang = None
-
-    # 翻译消息（跳过原语言）
+    # 翻译消息
     translations = []
     for lang in target_languages:
-        if detected_lang and lang == detected_lang:
-            logger.info(f"跳过原语言：{lang}")
-            continue
         try:
             # 限制输入长度，避免翻译结果过长
             translated = GoogleTranslator(source='auto', target=lang).translate(original_text[:500])
