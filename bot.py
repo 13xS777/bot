@@ -24,7 +24,7 @@ def run_flask():
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
-target_languages = ['zh-cn', 'ja', 'ko', 'th']
+target_languages = ['en', 'zh-cn', 'ja', 'ko', 'th']
 
 @bot.event
 async def on_ready():
@@ -45,9 +45,19 @@ async def on_message(message):
 
     logger.info(f"收到消息：{original_text}")
 
-    # 翻译消息
+    # 检测输入语言
+    try:
+        detected_lang = GoogleTranslator(source='auto').detect(original_text)[1]  # 返回语言代码，如 'ja'
+        logger.info(f"检测到语言：{detected_lang}")
+    except Exception as e:
+        logger.error(f"语言检测失败：{str(e)}")
+        detected_lang = None
+
+    # 翻译消息（跳过原语言）
     translations = []
     for lang in target_languages:
+        if detected_lang and lang == detected_lang:
+            continue  # 跳过原语言
         try:
             translated = GoogleTranslator(source='auto', target=lang).translate(original_text)
             if translated:
