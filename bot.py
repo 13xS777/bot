@@ -1,14 +1,11 @@
 import discord
 from discord.ext import commands
-from googletrans import Translator
+from deep_translator import GoogleTranslator
 import os
 
 # 创建机器人实例
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.default())
 bot.intents.message_content = True
-
-# 初始化翻译器
-translator = Translator()
 
 # 目标语言列表
 target_languages = ['zh-cn', 'ja', 'ko', 'th']
@@ -23,23 +20,21 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
-    # 检测原消息语言
+    # 翻译消息
     original_text = message.content
-    detected_lang = translator.detect(original_text).lang
-
-    # 如果消息是纯英文或其他不支持的语言，跳过
-    if detected_lang not in ['zh-cn', 'ja', 'ko', 'th']:
+    if not original_text.strip():  # 检查空消息
         await bot.process_commands(message)
         return
 
-    # 为每个目标语言生成翻译（除了原语言）
     translations = []
     for lang in target_languages:
-        if lang != detected_lang:  # 不翻译回原语言
-            translated = translator.translate(original_text, dest=lang).text
+        try:
+            translated = GoogleTranslator(source='auto', target=lang).translate(original_text)
             translations.append(f"[{lang.upper()}]: {translated}")
+        except Exception as e:
+            translations.append(f"[{lang.upper()}]: 翻译失败 ({str(e)})")
 
-    # 如果有翻译，发送到频道
+    # 发送翻译结果
     if translations:
         reply = "\n".join(translations)
         await message.channel.send(reply)
@@ -47,5 +42,5 @@ async def on_message(message):
     # 继续处理命令
     await bot.process_commands(message)
 
-# 从环境变量获取token
+# 从环境变量获取 token
 bot.run(os.getenv('DISCORD_BOT_TOKEN'))
