@@ -25,7 +25,7 @@ def run_flask():
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
-target_languages = ['en', 'zh-CN', 'ja', 'ko', 'th']  # 使用 zh-CN 代替 zh-cn
+target_languages = ['en', 'zh-CN', 'ja', 'ko', 'th']
 
 @bot.event
 async def on_ready():
@@ -48,7 +48,7 @@ async def on_message(message):
 
     # 检测输入语言
     try:
-        detected_lang = detect(original_text)  # 使用 langdetect 检测语言
+        detected_lang = detect(original_text)  # 使用 langdetect
         logger.info(f"检测到语言：{detected_lang}")
     except Exception as e:
         logger.error(f"语言检测失败：{str(e)}")
@@ -61,7 +61,8 @@ async def on_message(message):
             logger.info(f"跳过原语言：{lang}")
             continue
         try:
-            translated = GoogleTranslator(source='auto', target=lang).translate(original_text)
+            # 限制输入长度，避免翻译结果过长
+            translated = GoogleTranslator(source='auto', target=lang).translate(original_text[:500])
             if translated:
                 translations.append(f"[{lang.upper()}]: {translated}")
                 logger.info(f"翻译到 {lang}: {translated}")
@@ -76,7 +77,7 @@ async def on_message(message):
     if translations:
         reply = "\n".join(translations)
         logger.info(f"总回复长度：{len(reply)} 字符")
-        if len(reply) <= 1900:  # 使用 1900 留余量
+        if len(reply) <= 1900:  # 留余量
             await message.channel.send(reply)
             logger.info(f"发送完整消息：{len(reply)} 字符")
         else:
