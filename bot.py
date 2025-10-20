@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from deep_translator import GoogleTranslator
+from langdetect import detect
 import os
 from flask import Flask
 import threading
@@ -24,7 +25,7 @@ def run_flask():
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
-target_languages = ['en', 'zh-cn', 'ja', 'ko', 'th']
+target_languages = ['en', 'zh-CN', 'ja', 'ko', 'th']  # 使用 zh-CN 代替 zh-cn
 
 @bot.event
 async def on_ready():
@@ -47,7 +48,7 @@ async def on_message(message):
 
     # 检测输入语言
     try:
-        detected_lang = GoogleTranslator(source='auto').detect(original_text)[1]  # 返回语言代码，如 'ja'
+        detected_lang = detect(original_text)  # 使用 langdetect 检测语言
         logger.info(f"检测到语言：{detected_lang}")
     except Exception as e:
         logger.error(f"语言检测失败：{str(e)}")
@@ -57,7 +58,8 @@ async def on_message(message):
     translations = []
     for lang in target_languages:
         if detected_lang and lang == detected_lang:
-            continue  # 跳过原语言
+            logger.info(f"跳过原语言：{lang}")
+            continue
         try:
             translated = GoogleTranslator(source='auto', target=lang).translate(original_text)
             if translated:
@@ -70,26 +72,27 @@ async def on_message(message):
             translations.append(f"[{lang.upper()}]: 翻译失败 ({str(e)})")
             logger.error(f"翻译到 {lang} 失败: {str(e)}")
 
-    # 分段发送消息（避免超过 2000 字符限制）
+    # 分段发送消息（严格控制长度）
     if translations:
         reply = "\n".join(translations)
         logger.info(f"总回复长度：{len(reply)} 字符")
-        if len(reply) <= 2000:
+        if len(reply) <= 1900:  # 使用 1900 留余量
             await message.channel.send(reply)
+            logger.info(f"发送完整消息：{len(reply)} 字符")
         else:
             # 分段发送
             current_message = ""
             for line in translations:
-                if len(current_message) + len(line) + 1 <= 2000:
+                if len(current_message) + len(line) + 1 <= 1900:
                     current_message += line + "\n"
                 else:
                     if current_message:
                         await message.channel.send(current_message.strip())
-                        logger.info(f"发送分段消息：{len(current_message)} 字符")
+                        logger.info(f"发送分段消息：{len(current_message)} 字符, 内容: {current_message.strip()}")
                         current_message = line + "\n"
             if current_message:
                 await message.channel.send(current_message.strip())
-                logger.info(f"发送最后分段消息：{len(current_message)} 字符")
+                logger.info(f"发送最后分段消息：{len(current_message)} 字符, 内容: {current_message.strip()}")
 
     # 继续处理命令
     await bot.process_commands(message)
